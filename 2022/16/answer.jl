@@ -60,16 +60,18 @@ let input = readlines("input")
                 
                 max_remaining = sum((n) -> node_weights[n]*(limit-(current_time+minimum(shortest_distances[state.current_nodes, n]))), state.closed_valves; init=0)
                 
+                if max_path >= max_remaining + state.released_pressure
+                    continue
+                end
+                
                 for v in state.closed_valves
                     dist = shortest_distances[visited_node, v]
-                    if max_path < max_remaining + state.released_pressure
-                        minutes = copy(state.minutes)
-                        nodes = copy(state.current_nodes)
-                        minutes[1] += dist
-                        nodes[1] = v
-                        p = sortperm(minutes)
-                        push!(next, TraversalState((@view nodes[p]), copy(state.closed_valves), state.released_pressure, (@view minutes[p])))
-                    end
+                    minutes = copy(state.minutes)
+                    nodes = copy(state.current_nodes)
+                    minutes[1] += dist
+                    nodes[1] = v
+                    p = sortperm(minutes)
+                    push!(next, TraversalState(nodes[p], copy(state.closed_valves), state.released_pressure, minutes[p]))
                 end
             end
         end

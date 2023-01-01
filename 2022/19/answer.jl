@@ -4,9 +4,8 @@ let input = readlines("input")
     robots = Int8[1; 0; 0; 0]
     blueprints = Vector{Matrix{Int8}}(undef, 0)
     
-    function simulate(robots::Vector{Int8}, blueprint::Matrix{Int8}, ores::Vector{Int16}, sols::Dict{Int, Tuple{Int16, Int8}}; t=1, time_limit=24, best=0)
-        @assert maximum(ores)<1000 "Too many ores! Hashing function will duplicate keys!"
-        key = sum(robots[i+1] * (time_limit^i) for i = 0:3) + sum(ores[i+1] * time_limit^(4+2i) for i = 0:3)
+    function simulate(robots::Vector{Int8}, blueprint::Matrix{Int8}, ores::Vector{Int16}; sols::Dict{UInt, Tuple{Int16, Int8}}=Dict{UInt, Tuple{Int16, Int8}}(), t=1, time_limit=24, best=0, max_blueprint=maximum.(eachcol(blueprint[:,1:end-1])))
+        @views key = hash((min.(robots[1:end-1], max_blueprint), min.(ores[1:end-1], max_blueprint .* (time_limit - t)), robots[end], ores[end]))
         if haskey(sols, key)
             if sols[key][2] <= t
                 return sols[key][1]
@@ -21,16 +20,20 @@ let input = readlines("input")
         end
         
         ores .+= robots
-        best = max(best, simulate(robots, blueprint, ores, sols; t=t+1, time_limit=time_limit, best=best))
+        built_all_robots = true
         for i = 1:size(blueprint, 1)
             if all(blueprint[i, j] <= (ores[j] - robots[j]) for j = 1:length(ores)) && blueprint[i, i] < (time_limit-t)
                 robots[i] += 1
                 ores .-= @view blueprint[i, :]
-                best = max(best, 
-                                 simulate(robots, blueprint, ores, sols; t=t+1, time_limit=time_limit, best=best))
+                best = max(best, simulate(robots, blueprint, ores; sols=sols, t=t+1, time_limit=time_limit, best=best, max_blueprint=max_blueprint))
                 ores .+= @view blueprint[i, :]
                 robots[i] -= 1
+            else
+                built_all_robots = false
             end
+        end
+        if !built_all_robots
+            best = max(best, simulate(robots, blueprint, ores; sols=sols, t=t+1, time_limit=time_limit, best=best, max_blueprint=max_blueprint))
         end
         ores .-= robots
         
@@ -51,16 +54,14 @@ let input = readlines("input")
     # Part 1
     quality_level = 0
     for (i, blueprint) in enumerate(blueprints)
-        sols = Dict{Int, Tuple{Int16, Int8}}()
-        quality_level += i * simulate(robots, blueprint, zeros(Int16, 4), sols)
+        quality_level += i * simulate(robots, blueprint, zeros(Int16, 4))
     end
     display(quality_level)
     
     # Part 2
     n = 1
     for blueprint in blueprints[1:3]
-        sols = Dict{Int, Tuple{Int16, Int8}}()
-        n *= simulate(robots, blueprint, zeros(Int16, 4), sols; time_limit=32)
+        n *= simulate(robots, blueprint, zeros(Int16, 4); time_limit=32)
     end
     display(n)
 end

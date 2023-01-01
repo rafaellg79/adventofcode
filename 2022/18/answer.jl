@@ -1,9 +1,11 @@
+using DelimitedFiles
+
 let input = readdlm("input", ',', Int)
     # Part 1
     faces = size(input, 1)*6
     for i in 1:size(input, 1)
         for j in 1:i
-            if sum(abs.(input[i, :] .- input[j, :])) == 1
+            if sum(abs(input[i, k] - input[j, k]) for k in 1:size(input, 2)) == 1
                 faces -= 2
             end
         end

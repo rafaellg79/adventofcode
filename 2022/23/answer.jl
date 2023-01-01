@@ -18,7 +18,8 @@ let input = readlines("input")
     tests = copy(starting_tests)
     current = collect(padarray(A, ImageFiltering.Fill(0, (11, 11))))
     next = zeros(Int, size(current))
-    for n = 1:10
+    
+    function simulate(current, moves, tests; next=zeros(size(current)))
         for I in CartesianIndices(current)
             if current[I] == -1
                 if count(==(0), current[I[1]-1:I[1]+1, I[2]-1:I[2]+1]) == 8
@@ -49,6 +50,11 @@ let input = readlines("input")
                 end
             end
         end
+        return next
+    end
+    
+    for n = 1:10
+        simulate(current, moves, tests; next=next)
         current .= next
         current[current.>0] .= -1
         current[current.==-2] .= 0
@@ -67,57 +73,35 @@ let input = readlines("input")
     # Part 2
     total_moves = 10
     while true
-        for I in CartesianIndices(current)
-            if current[I] == -1
-                if count(==(0), current[I[1]-1:I[1]+1, I[2]-1:I[2]+1]) == 8
-                    next[I] = -1
-                    continue
-                end
-                moved = false
-                for (move_ind, move) in enumerate(moves)
-                    J = I+move
-                    if all(x -> current[J+x]==(0), tests[move_ind])
-                        if next[J] == 0
-                            next[J] = move_ind
-                            moved = true
-                            break
-                        else
-                            next[I] = -1
-                            if next[J] > 0
-                                next[J-moves[next[J]]] = -1
-                                next[J] = -2
-                                moved = true
-                                break
-                            end
-                        end
-                    end
-                end
-                if !moved
-                    next[I] = -1
-                end
-            end
-        end
+        active_current = @view current[(y0-1):(y1+1), (x0-1):(x1+1)]
+        active_next = @view next[(y0-1:y1+1), (x0-1:x1+1)]
+
+        simulate(active_current, moves, tests; next=active_next)
         
-        next[next.>0] .= -1
-        next[next.==-2] .= 0
+        active_next[active_next.>0] .= -1
+        active_next[active_next.==-2] .= 0
         total_moves+=1
-        if current == next
+        if active_current == active_next
             break
         end
-        current .= next
+        active_current .= active_next
         circshift!(moves, -1)
         circshift!(tests, -1)
         
-        x0 = findfirst(<(0), current)[2]
-        x1 = findlast(<(0), current)[2]
-        y0 = findfirst(<(0), current')[2]
-        y1 = findlast(<(0), current')[2]
+        x1 = findlast(<(0), active_current)[2]+x0-2
+        x0 = findfirst(<(0), active_current)[2]+x0-2
+        y1 = findlast(<(0), active_current')[2]+y0-2
+        y0 = findfirst(<(0), active_current')[2]+y0-2
         
         if x0 == 1 || y0 == 1 || x1 == size(current, 2) || y1 == size(current, 1)
-            current = collect(padarray(current, ImageFiltering.Fill(0, (1, 1))))
+            current = collect(padarray(current, ImageFiltering.Fill(0, (10, 10))))
             next = zeros(Int, size(current))
+            x0 += 10
+            y0 += 10
+            x1 += 10
+            y1 += 10
         else
-            next .= 0
+            active_next .= 0
         end
     end
     display(total_moves)

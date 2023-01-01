@@ -1,6 +1,5 @@
 let input = readlines("input")
-    lists = eval.(Meta.parse.(input))
-    filter!(!isnothing, lists)
+    lists = eval(Meta.parse("[" * join(filter(!isempty, input), ",") * "]"))
     
     function compare(a::Int, b::Int)
         return sign(b - a)
